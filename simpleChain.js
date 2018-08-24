@@ -46,16 +46,7 @@ class Blockchain {
 		levelSandbox.print();
 	}
 
-	addBlock(newBlock) {
-		let self = this;
-		setTimeout(function() {
-			setTimeout(function() {
-				self.asyncAddBlock(newBlock);
-			}, Math.floor(Math.random() * dispatchDelay));
-		}, 0);
-	}
-
-	async asyncAddBlock(newBlock) {
+	async addBlock(newBlock) {
 		newBlock.height = await this.getBlockHeight();
 		newBlock.time = new Date().getTime().toString().slice(0,-3);
 

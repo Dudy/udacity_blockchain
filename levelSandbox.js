@@ -9,7 +9,7 @@ const chainDB = './chaindata';
 const db = level(chainDB);
 
 function store(key, value) {
-  db.put(key, value);
+  return db.put(key, value);
 }
 
 function load(key) {

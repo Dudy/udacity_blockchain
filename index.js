@@ -17,13 +17,14 @@ async function getBlock(req, res) {
   if (block) {
     res.send(block);
   } else {
-    res.status(404).send('block ' + blockheight + ' not found');
+    res.status(404).send({error: 'block ' + blockheight + ' not found'});
   }
 }
 
 async function postBlock(req, res) {
   let newHeight = await blockchain.asyncAddBlock(new Block(req.body.body));
-  res.send(await getBlockFromBlockchainByHeight(newHeight));
+  let newBlock = await getBlockFromBlockchainByHeight(newHeight);
+  res.send(newBlock);
 }
 
 app.get('/block/:blockheight', getBlock);
