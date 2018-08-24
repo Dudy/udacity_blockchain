@@ -12,7 +12,13 @@ async function getBlockFromBlockchainByHeight(blockheight) {
 }
 
 async function getBlock(req, res) {
-  res.send(await getBlockFromBlockchainByHeightreq.params['blockheight']);
+  let blockheight = req.params['blockheight'];
+  let block = await getBlockFromBlockchainByHeight(blockheight);
+  if (block) {
+    res.send(block);
+  } else {
+    res.status(404).send('block ' + blockheight + ' not found');
+  }
 }
 
 async function postBlock(req, res) {
