@@ -27,6 +27,7 @@ Get one specific block from the blockchain that is denoted by the given
 blockheight.
 
 **URL** : `/block/:blockheight/`
+
 **Method**: `GET`
 
 ## Query Parameters
@@ -69,6 +70,7 @@ This will be added to the blockchain as a new block. The new block will be
 returned as if it was requested by the above mentioned GET method.
 
 **URL** : `/block`
+
 **Method**: `POST`
 
 ## Query Parameters
