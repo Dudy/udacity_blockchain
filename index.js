@@ -22,8 +22,7 @@ async function getBlock(req, res) {
 }
 
 async function postBlock(req, res) {
-  let newHeight = await blockchain.asyncAddBlock(new Block(req.body.body));
-  let newBlock = await getBlockFromBlockchainByHeight(newHeight);
+  let newBlock = await blockchain.addBlock(new Block(req.body.body));
   res.send(newBlock);
 }
 

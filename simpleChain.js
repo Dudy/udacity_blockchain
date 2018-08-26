@@ -37,7 +37,7 @@ class Blockchain {
 		let self = this;
 		this.getBlockHeight().then(function(blockheight) {
 			if (blockheight === 0) {
-				self.asyncAddBlock(new Block("First block in the chain - Genesis block"));
+				self.addBlock(new Block("First block in the chain - Genesis block"));
 			}
 		});
   }
@@ -58,7 +58,7 @@ class Blockchain {
 		newBlock.hash = SHA256(JSON.stringify(newBlock)).toString();
 		await levelSandbox.store(newBlock.height, JSON.stringify(newBlock));
 
-		return newBlock.height;
+		return newBlock;
 	}
 
 	async getBlockHeight() {
