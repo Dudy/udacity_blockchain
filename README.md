@@ -42,7 +42,7 @@ None
 ## Example
 ### Request
 
-    https://localhost:8000/block/12
+    http://localhost:8000/block/12
 
 ### Response
 ``` json
