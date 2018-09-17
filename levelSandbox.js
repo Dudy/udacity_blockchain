@@ -37,9 +37,17 @@ function print() {
       });
 }
 
+function printRaw() {
+  db.createReadStream()
+    .on('data', function(data) {
+      console.log(data);
+    });
+}
+
 module.exports = {
   load: load,
   store: store,
   getBlockHeight: getBlockHeight,
-  print: print
+  print: print,
+  printRaw: printRaw
 }
