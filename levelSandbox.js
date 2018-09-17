@@ -21,7 +21,9 @@ function getBlockHeight() {
     let i = 0;
     db.createReadStream()
       .on('data', function(data) {
-          i++;
+          if (!data.key.startsWith('star_registration')) {
+            i++;
+          }
         }).on('error', function(err) {
           resolve(0);
         }).on('close', function() {

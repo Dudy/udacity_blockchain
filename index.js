@@ -5,6 +5,10 @@ const app = express()
 const Blockchain = require('./simpleChain.js').Blockchain;
 const Block = require('./simpleChain.js').Block;
 const levelSandbox = require('./levelSandbox.js');
+const bitcoinMessage = require('bitcoinjs-message');
+
+// 5 minutes = 300 seconds
+const validationWindow = 5 * 60;
 
 app.use(express.json());
 
@@ -25,19 +29,69 @@ async function getBlock(req, res) {
 }
 
 async function postBlock(req, res) {
-  let newBlock = await blockchain.addBlock(new Block(req.body.body));
+
+levelSandbox.printRaw();
+
+console.log('--------------------------------------------------------');
+console.log(req.body);
+console.log('--------------------------------------------------------');
+
+  if (!req.body.address) {
+    console.log('Error: request contains no address in body');
+    res.status(400).send({error: 'no address provided'});
+    return;
+  }
+
+  if (!req.body.star) {
+    console.log('Error: request contains no star object in body');
+    res.status(400).send({error: 'no star data provided'});
+    return;
+  }
+
+  if (!req.body.star.ra) {
+    console.log('Error: request contains no right ascension in star object');
+    res.status(400).send({error: 'no right ascension in star data provided'});
+    return;
+  }
+
+  if (!req.body.star.dec) {
+    console.log('Error: request contains no declination in star object');
+    res.status(400).send({error: 'no declination in star data provided'});
+    return;
+  }
+
+  if (!req.body.star.story) {
+    console.log('Error: request contains no story in star object');
+    res.status(400).send({error: 'no story in star data provided'});
+    return;
+  }
+
+  req.body.star.story = Buffer.from(req.body.star.story).toString('hex');
+
+  if (Buffer.byteLength(req.body.star.story) > 500) {
+    console.log('Error: request contains a story with more than 500 bytes length in star object');
+    res.status(400).send({error: 'story with more than 500 bytes length provided'});
+    return;
+  }
+
+  let grant = await levelSandbox.load("star_registration_granted_" + req.body.address);
+
+  if (!grant) {
+    res.status(401).send({error: 'not authorized to register a star'});
+    return;
+  }
+
+  if (grant !== '0') {
+    res.status(403).send({error: 'you are only allowed to register one star, and you already have'});
+    return;
+  }
+
+  let newBlock = await blockchain.addBlock(new Block(req.body));
+  let registrationTimestamp = new Date().getTime().toString().slice(0,-3);
+  await levelSandbox.store("star_registration_granted_" + req.body.address, registrationTimestamp);
+
   res.send(newBlock);
 }
-
-app.get('/block/:blockheight', getBlock);
-app.post('/block', postBlock);
-
-// <project 4>
-
-const bitcoinMessage = require('bitcoinjs-message');
-
-// 5 minutes = 300 seconds
-var validationWindow = 5 * 60;
 
 async function requestValidation(req, res) {
   if (!req.body.address) {
@@ -151,6 +205,8 @@ async function messageSignatureValidation(req, res) {
     return;
   }
 
+  await levelSandbox.store("star_registration_granted_" + address, '0');
+
   res.send({
     "registerStar": true,
     "status": {
@@ -163,16 +219,15 @@ async function messageSignatureValidation(req, res) {
   });
 }
 
+// app routes
+app.get('/block/:blockheight', getBlock);
+app.post('/block', postBlock);
 app.post('/requestValidation', requestValidation);
-
 app.post('/message-signature/validate', messageSignatureValidation);
 
-// only for testing
-app.post('/test/validationWindow', function(req, res) {
+app.post('/test/validationWindow', function(req, res) { // only for testing
   validationWindow = req.body.validationWindow;
   res.status(204).send();
 });
-
-// </project 4>
 
 app.listen(8000, () => console.log('Example app listening on port 8000!'))

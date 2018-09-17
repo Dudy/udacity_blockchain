@@ -18,7 +18,7 @@ const levelSandbox = require('./levelSandbox.js');
 
 const dispatchDelay = 3000;
 
-class Block{
+class Block {
 	constructor(data) {
      this.hash = "",
      this.height = 0,
