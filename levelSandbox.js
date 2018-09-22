@@ -16,6 +16,10 @@ function load(key) {
   return db.get(key);
 }
 
+function remove(key) {
+  return db.del(key);
+}
+
 function getBlockHeight() {
   return new Promise(resolve => {
     let i = 0;
@@ -49,6 +53,7 @@ function printRaw() {
 module.exports = {
   load: load,
   store: store,
+  remove: remove,
   getBlockHeight: getBlockHeight,
   print: print,
   printRaw: printRaw
