@@ -1,8 +1,8 @@
 This is the Udacity Blockchain Nanodegree project of Dirk Podolak.
 
-# Project 3
+# Project Overview
 
-Now I added a RESTful API using the express.js framework. The starting point of
+The starting point of
 the application is the index.js file, so you may start by running
 
 ```node index.js```
@@ -15,9 +15,7 @@ project directory.
 
 ```npm install```
 
-The implemented endpoints are
-- GET
-- POST
+The implemented endpoints are as follows.
 
 --------------------------------------------------------------------------------
 
