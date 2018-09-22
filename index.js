@@ -8,7 +8,7 @@ const levelSandbox = require('./levelSandbox.js');
 const bitcoinMessage = require('bitcoinjs-message');
 
 // 5 minutes = 300 seconds
-const validationWindow = 5 * 60;
+var validationWindow = 5 * 60;
 
 app.use(express.json());
 
@@ -22,6 +22,11 @@ async function getBlock(req, res) {
   let blockheight = req.params['blockheight'];
   let block = await getBlockFromBlockchainByHeight(blockheight);
   if (block) {
+    try {
+      block.body.star.storyDecoded = Buffer.from(block.body.star.story, 'hex').toString();
+    } catch (error) {
+      // noop
+    }
     res.send(block);
   } else {
     res.status(404).send({error: 'block ' + blockheight + ' not found'});
@@ -29,13 +34,6 @@ async function getBlock(req, res) {
 }
 
 async function postBlock(req, res) {
-
-levelSandbox.printRaw();
-
-console.log('--------------------------------------------------------');
-console.log(req.body);
-console.log('--------------------------------------------------------');
-
   if (!req.body.address) {
     console.log('Error: request contains no address in body');
     res.status(400).send({error: 'no address provided'});
@@ -137,6 +135,7 @@ async function requestValidation(req, res) {
   let message = address + ":" + requestTimestamp + ":starRegistry";
 
   await levelSandbox.store("star_registration_request_" + address, requestTimestamp);
+  await levelSandbox.remove("star_registration_granted_" + address);
 
   res.send({
     "address": address,
@@ -219,11 +218,90 @@ async function messageSignatureValidation(req, res) {
   });
 }
 
+async function getStar(req, res) {
+  let path = req.params['data'];
+  let index = path.indexOf(':');
+  let identifier = path.substring(0, index);
+  let data = path.substring(index + 1);
+
+  if (identifier === 'address') {
+    return getStarsByAddress(data, res);
+  } else if (identifier === 'hash') {
+    return getStarByHash(data, res);
+  } else {
+    console.log('Error cannot understand request');
+    console.log('path part: ' + path);
+    console.log('identifier: ' + identifier);
+    console.log('data: ' + data);
+    res.status(404).send({error: 'cannot understand request part: ' + path});
+  }
+}
+
+async function getStarsByAddress(address, res) {
+  console.log('look for address ' + address);
+
+  let blockheight = await blockchain.getBlockHeight() - 1;
+  let block = await blockchain.getBlock(blockheight);
+  let run = true;
+  let blocks = [];
+
+  while (run) {
+    if (block.body.address === address) {
+      block.body.star.storyDecoded = Buffer.from(block.body.star.story, 'hex').toString();
+      blocks.push(block);
+    }
+
+    if (block.previousBlockHash === '') {
+      run = false;
+    } else {
+      blockheight = blockheight - 1;
+      block = await blockchain.getBlock(blockheight);
+    }
+  }
+
+  if (blocks.length > 0) {
+    res.send(blocks);
+  } else {
+    res.status(404).send({error: 'no stars found for address ' + address});
+  }
+}
+
+async function getStarByHash(hash, res) {
+  console.log('look for hash ' + hash);
+
+  let blockheight = await blockchain.getBlockHeight() - 1;
+  let block = await blockchain.getBlock(blockheight);
+  let run = true;
+  let foundBlock;
+
+  while (run) {
+    if (block.hash === hash) {
+      block.body.star.storyDecoded = Buffer.from(block.body.star.story, 'hex').toString();
+      foundBlock = block
+      run = false
+    }
+
+    if (block.previousBlockHash === '') {
+      run = false;
+    } else {
+      blockheight = blockheight - 1;
+      block = await blockchain.getBlock(blockheight);
+    }
+  }
+
+  if (foundBlock) {
+    res.send(foundBlock);
+  } else {
+    res.status(404).send({error: 'no star found for hash ' + hash});
+  }
+}
+
 // app routes
 app.get('/block/:blockheight', getBlock);
 app.post('/block', postBlock);
 app.post('/requestValidation', requestValidation);
 app.post('/message-signature/validate', messageSignatureValidation);
+app.get('/stars/:data', getStar);
 
 app.post('/test/validationWindow', function(req, res) { // only for testing
   validationWindow = req.body.validationWindow;
