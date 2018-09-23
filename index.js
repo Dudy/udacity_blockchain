@@ -93,19 +93,22 @@ async function postBlock(req, res) {
 
 async function requestValidation(req, res) {
   if (!req.body.address) {
-    console.log('Error: request contains no address in body');
+    console.log('ERROR: Error: request contains no address in body');
     res.status(400).send({error: 'no address provided'});
     return;
   }
 
   let address = req.body.address;
   let requestTimestamp = new Date().getTime().toString().slice(0,-3);
-  let storedTimestamp;
+console.log('DEBUG: requestTimestamp: ' + requestTimestamp);
+  let storedTimestamp = '0';
   
+console.log('DEBUG: loading star_registration_request_' + address);
   try {
     storedTimestamp = await levelSandbox.load("star_registration_request_" + address);
   } catch (error) {
     if (error.name === 'NotFoundError') {
+console.log('DEBUG: star_registration_request_' + address + ' not found');
       // address not found, this is the first validation message request, just go ahead
     } else {
       res.status(500).send({error: 'technical error'});
@@ -118,6 +121,7 @@ async function requestValidation(req, res) {
   let remainingValidationWindow = validationWindow - (requestTimestampInt - storedTimestampInt);
 
   if (remainingValidationWindow > 0) {
+    console.log('INFO : validation window still valid');
     let message = address + ":" + storedTimestamp + ":starRegistry";
 
     res.send({
@@ -129,12 +133,14 @@ async function requestValidation(req, res) {
 
     return;
   } else {
-    console.log('validation window exceeded, starting a new one');
+    console.log('INFO : validation window exceeded, starting a new one');
   }
   
   let message = address + ":" + requestTimestamp + ":starRegistry";
 
+console.log('DEBUG: store star_registration_request_' + address + ': ' + requestTimestamp);
   await levelSandbox.store("star_registration_request_" + address, requestTimestamp);
+console.log('DEBUG: remove star_registration_granted_' + address);
   await levelSandbox.remove("star_registration_granted_" + address);
 
   res.send({
@@ -152,18 +158,19 @@ async function messageSignatureValidation(req, res) {
   let storedTimestamp;
 
   try {
+console.log('DEBUG: loading star_registration_request_' + address);
     storedTimestamp = await levelSandbox.load("star_registration_request_" + address);
 
     if (!storedTimestamp) {
-      console.log('Error: address ' + address + ' has no timestamp in database (key: star_registration_request_' + address + ')');
+      console.log('ERROR: Error: address ' + address + ' has no timestamp in database (key: star_registration_request_' + address + ')');
       res.status(500).send({error: 'technical error'});
       return;
     } else {
-      console.log('stored timestamp found: ' + storedTimestamp);
+      console.log('INFO : stored timestamp found: ' + storedTimestamp);
     }
   } catch (error) {
     if (error.name === 'NotFoundError') {
-      console.log('Error: address ' + address + ' not found in database (key: star_registration_request_' + address + ')');
+      console.log('ERROR: Error: address ' + address + ' not found in database (key: star_registration_request_' + address + ')');
       res.status(400).send({error: 'You need to request for validation first, please use the path /requestValidation to request a validation message.'});
       return;
     } else {
@@ -178,11 +185,11 @@ async function messageSignatureValidation(req, res) {
   let remainingValidationWindow = validationWindow - (requestTimestampInt - storedTimestampInt);
 
   if (remainingValidationWindow <= 0) {
-    console.log('signature validation request was not within validation window (' + Math.abs(remainingValidationWindow) + ' seconds too late)');
+    console.log('INFO : signature validation request was not within validation window (' + Math.abs(remainingValidationWindow) + ' seconds too late)');
     res.status(400).send({error: 'Your validation window has expired, please use the path /requestValidation again to request a new validation message.'});
     return;
   } else {
-    console.log('signature validation request was within validation window (' + remainingValidationWindow + ' seconds left)');
+    console.log('INFO : signature validation request was within validation window (' + remainingValidationWindow + ' seconds left)');
   }
 
   let message = address + ":" + storedTimestamp + ":starRegistry";
@@ -196,15 +203,18 @@ async function messageSignatureValidation(req, res) {
   }
 
   if (!signatureValid) {
-    console.log('Error: invalid signature provided:');
-    console.log('message : ' + message);
-    console.log('address : ' + address);
-    console.log('signature: ' + signature);
+    console.log('ERROR: Error: invalid signature provided:');
+    console.log('ERROR: message : ' + message);
+    console.log('ERROR: address : ' + address);
+    console.log('ERROR: signature: ' + signature);
     res.status(400).send({error: 'The signature could not be verified.'});
     return;
   }
 
+console.log('DEBUG: store star_registration_granted_' + address + ': 0');
   await levelSandbox.store("star_registration_granted_" + address, '0');
+console.log('DEBUG: removing star_registration_request_' + address);
+  await levelSandbox.remove("star_registration_request_" + address);
 
   res.send({
     "registerStar": true,
